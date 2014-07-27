@@ -1,0 +1,114 @@
+---
+title: "analysis_machine_learning"
+author: "Mario Jimenez Garcia"
+date: "Sunday, July 27, 2014"
+output: html_document
+---
+Introduction
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases. 
+
+```{r}
+createConfusionMatrix <- function(act, pred)
+{
+  numClasses <- max(act, pred)
+  pred <- pred[order(act)]
+  act  <- act[order(act)]
+  sapply(split(pred, act), tabulate, nbins=numClasses)
+}
+
+```
+
+
+
+After  thing I will do is load the data
+
+```{r}
+setwd("C:/Users/masterins/Desktop/Data Science Johns Hopkins University/Machine learning/Project/datos")
+data_training <- read.csv("pml-training.csv")
+data_testing <- read.csv("pml-testing.csv")
+
+```
+I must separate the data you workout on 2 data packets for later use in cross-validation
+
+```{r}
+
+library(caret)
+set.seed(1234)
+training_index <- createDataPartition(data_training$classe, list=FALSE, p=.9)
+final_training = data_training[training_index,]
+final_testing = data_training[-training_index,]
+
+```
+
+And now remove the data of near to zero variance.
+
+```{r}
+
+library(caret)
+remove <- nearZeroVar(final_training)
+
+
+final_training <- final_training[-remove]
+final_testing <- final_testing[-remove]
+data_testing <- data_testing[-remove]
+
+```
+
+I need a filter, this filter, only need to numeric data and results
+
+```{r}
+num_index = which(lapply(final_training,class) %in% c('numeric')  )
+```
+
+There are missing values, i need to identify
+
+```{r}
+
+preModel <- preProcess(final_training[,num_index], method=c('knnImpute'))
+
+pretraining <- cbind(final_training$classe, predict(preModel, final_training[,num_index]))
+
+pretesting <- cbind(final_testing$classe, predict(preModel, final_testing[,num_index]))
+
+pre_data_testing <- predict(preModel, data_testing[,num_index])
+
+names(pretraining)[1] <- 'classe'
+names(pretesting)[1] <- 'classe'
+
+
+```
+
+We will create the model, using the numeric variables that we have created, we will use caret, one for receive mtry 32, this process demanded by the same computational resources must optimize
+
+```{r}
+library(randomForest)
+first_model  <- randomForest(classe ~ ., pretraining, ntree=500, mtry=32)
+
+```
+Now I have my first model, I must measure accurately using training data and validation data cruzada.Por example we can detect any bias and also to detect if we make an adjustment for the change in the variance
+
+```{r}
+training_accurately <- predict(first_model, pretraining) 
+testing_accurately <- predict(first_model, pretesting) 
+
+training_accurately
+testing_accurately
+
+final_result<-predict(first_model, pre_data_testing)
+final_result
+```
+
+We can see that the accuracy is 100% and no bias 
+To validate the cross is greater 99% and therefore the 20 predictions are sufficient, 
+The confidence interval is 98.7% 
+
+Therefore the model explains and is reliable with respect to the prediction
+
+
+
+
+
+
+
+
